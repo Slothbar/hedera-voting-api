@@ -3,9 +3,15 @@ import requests
 
 app = FastAPI()
 
-HEDERA_API_URL = "https://mainnet-public.mirrornode.hedera.com/api/v1/transactions"
-DESTINATION_WALLET = "0.0.8063721"  # Wallet that receives the SLOTH token
-TOKEN_ID = "0.0.7917527"  # Your actual SLOTH Token ID
+# Multiple mirror nodes to check
+MIRROR_NODES = [
+    "https://mainnet-public.mirrornode.hedera.com/api/v1",
+    "https://api.kabuto.sh/v1",
+    "https://hedera.ledgerworks.io/api/v1"
+]
+
+DESTINATION_WALLET = "0.0.8063721"
+TOKEN_ID = "0.0.7917527"
 
 @app.get("/")
 def home():
@@ -14,17 +20,23 @@ def home():
 @app.get("/verify_transaction/")
 def verify_transaction(wallet_address: str):
     try:
-        response = requests.get(f"{HEDERA_API_URL}?account.id={wallet_address}&order=desc&limit=10")
-        data = response.json()
+        print(f"Checking transactions for wallet: {wallet_address}")
 
-        if "transactions" not in data or not data["transactions"]:
-            return {"status": "not_found", "message": "No transactions found"}
+        for node in MIRROR_NODES:
+            print(f"Trying Mirror Node: {node}")
 
-        for tx in data["transactions"]:
-            if "token_transfers" in tx:
-                for transfer in tx["token_transfers"]:
-                    if transfer["account"] == DESTINATION_WALLET and transfer["amount"] == 1 and transfer["token_id"] == TOKEN_ID:
-                        return {"status": "verified", "message": "SLOTH Token Transaction Verified"}
+            # Try the account transactions API
+            response = requests.get(f"{node}/accounts/{wallet_address}/transactions?order=desc&limit=10")
+            if response.status_code == 200:
+                data = response.json()
+                print(f"API Response from {node}: {data}")
+
+                if "transactions" in data:
+                    for tx in data["transactions"]:
+                        if "token_transfers" in tx:
+                            for transfer in tx["token_transfers"]:
+                                if transfer["account"] == DESTINATION_WALLET and transfer["amount"] == 1 and transfer["token_id"] == TOKEN_ID:
+                                    return {"status": "verified", "message": f"SLOTH Token Transaction Verified from {node}"}
 
         return {"status": "not_found", "message": "SLOTH Token transaction not found"}
 
