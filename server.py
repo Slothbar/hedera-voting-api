@@ -16,10 +16,10 @@ def home():
 @app.get("/verify_transaction/")
 def verify_transaction(wallet_address: str):
     try:
-        print(f"🔍 Checking transactions for wallet: {wallet_address}")
+        print(f"🔍 Checking token transfers for wallet: {wallet_address}")
 
-        # Fetch transactions from the account
-        url = f"{HEDERA_MIRROR_NODE}/accounts/{wallet_address}/transactions?order=desc&limit=10"
+        # Fetch token transfer transactions
+        url = f"{HEDERA_MIRROR_NODE}/token-transfers?account.id={wallet_address}&order=desc&limit=10"
         response = requests.get(url)
         print(f"➡️ Requesting: {url}")
 
@@ -29,17 +29,14 @@ def verify_transaction(wallet_address: str):
 
             if "transactions" in data:
                 for tx in data["transactions"]:
-                    if "token_transfers" in tx:
-                        for transfer in tx["token_transfers"]:
-                            if (
-                                transfer["account"] == DESTINATION_WALLET
-                                and transfer["amount"] == 1
-                                and transfer["token_id"] == TOKEN_ID
-                            ):
-                                return {"status": "verified", "message": "SLOTH Token Transaction Verified"}
+                    for transfer in tx["token_transfers"]:
+                        if (
+                            transfer["account"] == DESTINATION_WALLET
+                            and transfer["amount"] == 1
+                            and transfer["token_id"] == TOKEN_ID
+                        ):
+                            return {"status": "verified", "message": "SLOTH Token Transaction Verified"}
 
         return {"status": "not_found", "message": "SLOTH Token transaction not found"}
 
     except Exception as e:
-        print(f"❌ API Error: {str(e)}")
-        return {"status": "error", "message": str(e)}
