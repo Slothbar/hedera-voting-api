@@ -40,3 +40,5 @@ def verify_transaction(wallet_address: str):
         return {"status": "not_found", "message": "SLOTH Token transaction not found"}
 
     except Exception as e:
+        print(f"❌ API Error: {str(e)}")
+        return {"status": "error", "message": str(e)}
